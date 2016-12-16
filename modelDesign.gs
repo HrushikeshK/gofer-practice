@@ -22,12 +22,20 @@ ctype Statement where
  If1 : Bexp -> Statement -> Statement
  Ifelse : Bexp -> Statement -> Statement -> Statement
 
+interpret : [Statement] -> State -> State
+interpret.[].state=state
+interpret.(x::xs).state=interpret.xs.(tStmt.x.state)
+
+interpret1 : [Program] -> State -> State
+interpret1.[].state=state
+interpret1.(x::xs).state=interpret.xs.(tStmt.x.state)
+
 ctype Value where
  StateI : Int -> Value
  StateB : Bool -> Value
 
 type State = [(String,Value)]
-
+type Program =[(String,Statement)]
 opI : Value -> Value -> (Int->Int->Int) -> Int
 opI.(StateI.x).(StateI.y).f = f.x.y
 
@@ -83,3 +91,4 @@ l5 = Mul.l3.l4
 l6 = Bcon.True
 l7 = Bvar."t"
 l8 = And.l6.l7
+
