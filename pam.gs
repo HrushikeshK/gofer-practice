@@ -8,7 +8,12 @@ pam2 : [a->b] -> a -> [b]
 pam2.fs.x = [ f.x | f <- fs ]
 
 pam3.fs.x = map.(\h -> h.x).fs
-pamEetaFn.x.fs = map.(.x).fs
+pamEtaFn.x.fs = map.(.x).fs
+
+-- Prove 1 and 2 are equivalent
+pamdot.f.xs = [f.x | x <- xs]	-- 1
+finalpam = flip.(flip.(.);map)	-- 2
+
 
 {-
 - Apply section rule and Eeta rule
