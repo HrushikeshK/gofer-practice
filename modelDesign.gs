@@ -91,7 +91,7 @@ tExp.(Boolean.(IsGreatE.x.y)).env
 
 
                      
-state   = [ ("x",StateI.10),("y",StateI.2),("z",StateI.3),("t",StateB.True),("f",StateB.False) ]
+state   = [ ("x",StateI.10),("y",StateI.2),("z",StateI.3), ("t",StateB.True),("f",StateB.False) ]
 program = [ ("l1", Assign."x".l2), ("l2", Assign."y".l5), ("l3", Jmp."l5".program), ("l4", Assign."t".l10), ("l5",Assign."x".l2) ]
 
 
@@ -131,13 +131,19 @@ cstate : Variable -> Value -> State -> State
 cstate.x.(StateB.val).((y,(StateB.z))::xs)
 			| x == y    = ((y,(StateB.val))::xs)
 			| otherwise = (y,(StateB.z)) :: cstate.x.(StateB.val).xs
+			
 cstate.x.(StateI.val).((y,(StateI.z))::xs)
 			| x == y    = ((y,(StateI.val))::xs)
 			| otherwise = (y,(StateI.z)) :: cstate.x.(StateI.val).xs
 
+cstate.x.(StateI.val).((y,(StateB.z))::xs)
+			| x == y    = error.("Type Mismatch : Cannot convert Bool to Int")
+			| otherwise = (y,(StateB.z)) :: cstate.x.(StateI.val).xs
 
-cstate.x.(StateI.val).((y,(StateB.z))::xs) = error.("Type Mismatch : Cannot convert Bool to Int")
-cstate.x.(StateB.val).((y,(StateI.z))::xs) = error.("Type Mismatch : Cannot convert Int to Bool")
+cstate.x.(StateB.val).((y,(StateI.z))::xs)
+			| x == y    = error.("Type Mismatch : Cannot convert Int to Bool")
+			| otherwise = (y,(StateI.z)) :: cstate.x.(StateB.val).xs
+			
 cstate.x.val.[] = error.("No such variable available")			
 
 
