@@ -30,30 +30,18 @@ ctype Statement where
  Jmpe : Exp -> Exp -> Label -> Program -> Statement
  Jmple, Jmpge : Aexp -> Aexp -> Label -> Program -> Statement
  
-
 ctype Value where
  StateI : Int -> Value
  StateB : Bool -> Value
 
-{-
- - Interpret without labels
 
-interpret : [Statement] -> State -> State
-interpret.[].state = stateinterpret.(x::xs).state = interpret.xs.(tStmt.x.state)
--}
+-- Interpret
 
--- Interpret using labels
-
-interpret : Program -> State -> State
-interpret.[].state          = state
-interpret.(all@((y,x)::xs)).state
-			| x == Jmp.y.all = tStmt.x.state
-			--| x == Jmple.e1.e2.y.all = tStmt.x.state
-			| otherwise 	 = interpret.xs.(tStmt.x.state)
-
-		
-
-
+interpret : (Program, State) -> State
+interpret.([],state)          = state
+interpret.((all@((_,x)::_)),state) = interpret.(tStmt.x.(all,state))
+			
+			
 opI : Value -> Value -> (Int->Int->Int) -> Int
 opI.(StateI.x).(StateI.y).f = f.x.y
 
@@ -71,6 +59,7 @@ tExp.(Boolean.(Bcon.x)).env     = StateB.x
 tExp.(Boolean.(Bvar.x)).env     = lookup.env.x
 tExp.(Boolean.(And.x.y)).env    = StateB.(opB.(tExp.(Boolean.x).env).(tExp.(Boolean.y).env).(&&))
 tExp.(Boolean.(Or.x.y)).env     = StateB.(opB.(tExp.(Boolean.x).env).(tExp.(Boolean.y).env).(||))
+
 tExp.(Boolean.(IsEqual.(Arith.x).(Arith.y))).env
  				| tExp.(Arith.x).env == tExp.(Arith.y).env    = StateB.True
 				| otherwise 	     			      = StateB.False
@@ -92,33 +81,42 @@ tExp.(Boolean.(IsGreatE.x.y)).env
 
                      
 state   = [ ("x",StateI.10),("y",StateI.2),("z",StateI.3), ("t",StateB.True),("f",StateB.False) ]
-program = [ ("l1", Assign."x".l2), ("l2", Assign."y".l5), ("l3", Jmp."l5".program), ("l4", Assign."t".l10), ("l5",Assign."x".l2) ]
 
+program = [ ("l1", Assign."x".l2), ("l2", Assign."y".ly), ("l3", Jmple.(Ivar."x").(Icon.14)."l1".program), ("l4", Assign."t".l10), ("l5",Assign."z".lz) ]
+
+{-
+program2 = [ ("l1", Assign."x".l2), ("l2", Assign."y".ly), ("l3", Jmpe.(Ivar."x").(Icon.11)."l5".program), ("l4", Assign."t".l10), ("l5",Assign."z".lz) ]
+
+program3 = [ ("l1", Assign."x".l2), ("l2", Assign."y".ly), ("l3", Jmpge.(Ivar."x").(Icon.14)."l1".program), ("l4", Assign."t".l10), ("l5",Assign."z".lz) ]
+-}
 
 lookup : [(Variable,Value)] -> String -> Value
 lookup.((x,y)::xs).z
 		   | z == x    = y
 		   | otherwise = lookup.xs.z	   
 
-tStmt : Statement -> State -> State
-tStmt.(Assign.x.e).state = cstate.x.(tExp.e.state).state
+
+tStmt : Statement -> (Program,State) -> (Program,State)
+
+tStmt.Abort.(prog,state) = ([],state)
+tStmt.(Assign.x.e).(((_,_)::ms),state) = (ms,cstate.x.(tExp.e.state).state)
 tStmt.(Sequence.s1.s2).state = tStmt.s2.(tStmt.s1.state)
 
-tStmt.(Jmp.lab.(all@((x,y)::xs))).state
-	   | lab == x  = interpret.all.state
-	   | otherwise = tStmt.(Jmp.lab.xs).state
+tStmt.(Jmp.lab.(all@((x,y)::xs))).(prog,state)
+	   | lab == x  = (all,state)
+	   | otherwise = tStmt.(Jmp.lab.xs).(prog,state)
 	   
-tStmt.(Jmpe.exp1.exp2.lab.prog).state
-	   | tExp.(Boolean.(IsEqual.exp1.exp2)).state == StateB.True  = tStmt.(Jmp.lab.prog).state
-	   | otherwise			       		              = state
+tStmt.(Jmpe.exp1.exp2.lab.prog).(rest@((_,_) :: xs),state)
+	   | tExp.(Boolean.(IsEqual.exp1.exp2)).state == StateB.True  = tStmt.(Jmp.lab.prog).(rest,state)
+	   | otherwise			       		              = (xs,state)
 
-tStmt.(Jmple.exp1.exp2.lab.prog).state
-	   | tExp.(Boolean.(IsLessE.exp1.exp2)).state == StateB.True  = tStmt.(Jmp.lab.prog).state
-	   | otherwise			       		              = state
+tStmt.(Jmple.exp1.exp2.lab.prog).(rest@((_,_) :: xs),state)
+	   | tExp.(Boolean.(IsLessE.exp1.exp2)).state == StateB.True  = tStmt.(Jmp.lab.prog).(rest,state)
+	   | otherwise			       		              = (xs,state)
 
-tStmt.(Jmpge.exp1.exp2.lab.prog).state
-	   | tExp.(Boolean.(IsGreatE.exp1.exp2)).state == StateB.True  = tStmt.(Jmp.lab.prog).state
-	   | otherwise			       		               = state
+tStmt.(Jmpge.exp1.exp2.lab.prog).(rest@((_,_)::xs),state)
+	   | tExp.(Boolean.(IsGreatE.exp1.exp2)).state == StateB.True  = tStmt.(Jmp.lab.prog).(rest,state)
+	   | otherwise			       		               = (xs,state)
 
 
 
@@ -150,6 +148,10 @@ cstate.x.val.[] = error.("No such variable available")
 l0 = Ivar."x"
 l1 = Icon.1
 l2 = Arith.(Add.l0.l1)
+
+lx = Arith.(Add.l1.(Ivar."x"))
+ly = Arith.(Add.l1.(Ivar."y"))
+lz = Arith.(Add.l1.(Ivar."z"))
 
 l3 = Ivar."y"
 l4 = Ivar."x"
